@@ -67,6 +67,7 @@ function connectToTunnel() {
             tunnel.write(`${connId}:close\n`);
           }
           localConnections.delete(connId);
+          localSocket.destroy();
         });
       } else if (eventType === 'data') {
         if (parts.length < 3) {
@@ -75,7 +76,7 @@ function connectToTunnel() {
         }
         const payload = parts.slice(2).join(':');
         const localSocket = localConnections.get(connId);
-        if (localSocket) {
+        if (localSocket && !localSocket.destroyed) {
           localSocket.write(Buffer.from(payload, 'base64'));
         }
       } else if (eventType === 'close') {
@@ -91,13 +92,14 @@ function connectToTunnel() {
 
   tunnel.on('close', () => {
     console.log('Disconnected from VDS tunnel. Reconnecting in 5 seconds...');
-    localConnections.forEach(sock => sock.end());
+    localConnections.forEach(sock => sock.destroy());
     localConnections.clear();
     setTimeout(connectToTunnel, 5000);
   });
 
   tunnel.on('error', (err) => {
     console.error('Tunnel connection error:', err.message);
+    tunnel.destroy();
   });
 }
 

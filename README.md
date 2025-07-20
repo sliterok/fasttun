@@ -1,14 +1,24 @@
-# FastTun - TCP Tunnel
+# FastTun - A Simple Reverse TCP Tunnel
+
+Ever wanted to host a game server at home without complex port forwarding?
 
 This project provides a simple and effective way to expose a local TCP service (like a game server) running behind a NAT to the internet, using a Virtual Dedicated Server (VDS) as a public relay.
 
-## How It Works
+## The Concept: Reverse Tunneling
+
+The technique used here is called a **Reverse Tunnel**.
+
+Unlike traditional port forwarding where you configure your router to direct incoming traffic to a specific machine, a reverse tunnel works by initiating an outbound connection from your firewalled local machine to a publicly accessible server (your VDS).
+
+This outbound connection is then kept alive and used as a "tunnel" to relay traffic. When someone connects to your VDS on a public port, the VDS sends a signal through the tunnel, telling your local machine to connect to the local game server. All data is then passed back and forth through this tunnel, making your local server accessible to the world without any router configuration.
+
+## How It Works in Practice
 
 1.  **`vds_server.js` (Run on your VDS):** This script listens for two types of connections:
     *   A private "tunnel" connection from your local PC.
     *   Public connections from clients (e.g., game players).
-2.  **`local_client.js` (Run on your local PC):** This script establishes a persistent, authenticated connection to the `vds_server.js`, creating a "tunnel".
-3.  **Traffic Flow:** When a player connects to the VDS, the VDS server tells the local client to open a connection to the local game server. All traffic is then relayed back and forth through the tunnel, effectively making your local game server publicly accessible via the VDS's IP address.
+2.  **`local_client.js` (Run on your local PC):** This script establishes a persistent, authenticated connection to the `vds_server.js`, creating the reverse tunnel.
+3.  **Traffic Flow:** When a player connects to the VDS, the VDS server uses the tunnel to notify the local client. The local client then opens a direct connection to your local game server. All traffic is then relayed between the player and the game server through the VDS, effectively making your local game server publicly accessible via the VDS's IP address.
 
 ## Setup
 

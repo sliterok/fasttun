@@ -71,12 +71,18 @@ const tunnelServer = net.createServer((socket) => {
 
     tunnelConnection.on('error', (err) => {
       console.error('Tunnel connection error:', err.message);
+      tunnelConnection.destroy();
     });
   });
 
   socket.on('error', (err) => {
     console.error('Tunnel server socket error:', err.message);
+    socket.destroy();
   });
+});
+
+tunnelServer.on('error', (err) => {
+  console.error('Tunnel server main error:', err);
 });
 
 // Server for game clients
@@ -90,11 +96,11 @@ const gameServer = net.createServer((gameSocket) => {
   const connId = uuidv4();
   gameClients.set(connId, gameSocket);
   console.log(`Game client ${connId} connected.`);
-  
+
   tunnelConnection.write(`${connId}:new\n`);
 
   gameSocket.on('data', (data) => {
-    if(tunnelConnection) {
+    if (tunnelConnection && !tunnelConnection.destroyed) {
       const payload = data.toString('base64');
       tunnelConnection.write(`${connId}:data:${payload}\n`);
     }
@@ -102,7 +108,7 @@ const gameServer = net.createServer((gameSocket) => {
 
   gameSocket.on('close', () => {
     console.log(`Game client ${connId} disconnected.`);
-    if(tunnelConnection && !tunnelConnection.destroyed) {
+    if (tunnelConnection && !tunnelConnection.destroyed) {
       tunnelConnection.write(`${connId}:close\n`);
     }
     gameClients.delete(connId);
@@ -110,11 +116,16 @@ const gameServer = net.createServer((gameSocket) => {
 
   gameSocket.on('error', (err) => {
     console.error(`Error on game socket ${connId}:`, err.message);
-    if(tunnelConnection && !tunnelConnection.destroyed) {
+    if (tunnelConnection && !tunnelConnection.destroyed) {
       tunnelConnection.write(`${connId}:close\n`);
     }
     gameClients.delete(connId);
+    gameSocket.destroy();
   });
+});
+
+gameServer.on('error', (err) => {
+  console.error('Game server main error:', err);
 });
 
 tunnelServer.listen(VDS_TUNNEL_PORT, () => {
